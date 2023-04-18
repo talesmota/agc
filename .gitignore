@@ -1,0 +1,7 @@
+flask/**
+**/__pycache__
+uploads
+documents
+agc_copy.db
+agc\ copy.db
+agc.1.db
