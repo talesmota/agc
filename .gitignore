@@ -5,3 +5,4 @@ documents
 agc_copy.db
 agc\ copy.db
 agc.1.db
+entities/URL.py

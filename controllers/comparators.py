@@ -14,12 +14,12 @@ import time
 import ast
 import numpy as np
 from infra import PdfMiner
+from entities.URL import URL
 
 UPLOAD_FOLDER = os.getcwd()+'/uploads'
 ALLOWED_EXTENSIONS = {'pdf'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-# URL = '200.239.129.7'
-URL = 'localhost'
+
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -270,10 +270,15 @@ def send_to_robotreviwer(uid):
     
     headers = {"Content-Type": "multipart/form-data; charset=utf-8"}
 
+    _file = set()
     for comparator in comparatorList:
+        _file.add(comparator.path_files)
 
-        with open(comparator.path_files, "rb") as f:
-            file.append(('file', (comparator.path_files, f.read(), "multipart/form-data")))
+
+    for comparator in _file:
+
+        with open(comparator, "rb") as f:
+            file.append(('file', (comparator, f.read(), "multipart/form-data")))
    
     test_response = requests.post(url, files = file)
     response = test_response.json()
