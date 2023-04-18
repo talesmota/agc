@@ -400,9 +400,16 @@ def comparators_calc(uid):
 
    
     text = PdfMiner.convert_pdf_to_string(path)
+
     amstar = Amstar(text)
     amstar_result = amstar.result()
     amstar_score = amstar_result["result"]
+    amstar_values = list(amstar_result.values())
+    amstar_saida = {}
+    for i in range(4):
+        amstar_saida[f'item{(1+i)}'] = amstar_values[i]
+
+
 
     final_json = []
     for r in final_result:
@@ -429,14 +436,17 @@ def comparators_calc(uid):
                 "value": final_result[r]["comparator"]
             },
         ]
+        
         _json["result"] = dict()
         _json["result"]["number_of_participants"] = final_result[r]["sample"]
         _json["result"]["risk_of_bias"] = final_result[r]["bias"]
         _json["result"]["heterogeneity"] = final_result[r]["i2_json"]["heterogeneity"]
-        _json["result"]["amstar"] = final_result[r]["risco_vies_json"]
+        _json["result"]["amstar"] = amstar_saida
+        _json["result"]["amstar_result"] = amstar_values[4]
         _json["result"]["is_rct"] = final_result[r]["is_rct"]
 
         final_json.append(_json)
     
     return Success.body(final_json)
+
 
