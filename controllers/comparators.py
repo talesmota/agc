@@ -405,9 +405,18 @@ def comparators_calc(uid):
     amstar_result = amstar.result()
     amstar_score = amstar_result["result"]
     amstar_values = list(amstar_result.values())
-    amstar_saida = {}
+    amstar_saida = {
+        "items": dict(),
+        "lables": {
+            "1": "allocation_concealment",
+            "2": "blinding_of_outcome_assessment",
+            "3": "blinding_of_participants_and_personnel",
+            "4": "random_sequence_generation",
+        },
+        "result": amstar_values[4]
+    }
     for i in range(4):
-        amstar_saida[f'item{(1+i)}'] = amstar_values[i]
+        amstar_saida["items"][f'item{(1+i)}'] = amstar_values[i]
 
 
 
