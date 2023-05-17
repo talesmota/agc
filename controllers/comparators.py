@@ -15,6 +15,7 @@ import ast
 import numpy as np
 from infra import PdfMiner
 from entities.URL import URL
+import re
 
 UPLOAD_FOLDER = os.getcwd()+'/uploads'
 ALLOWED_EXTENSIONS = {'pdf'}
@@ -37,6 +38,7 @@ def calc(str, key, files):
     BIAS_MAP = {
         "high/unclear": { "score": 0, "label": "+" },
         "low": { "score": 1, "label": "?" },
+        "?": { "score": 0, "label": "?" },
     }
     partial_n = dict()
     partial_n["items"] = dict()
@@ -103,55 +105,58 @@ def calc(str, key, files):
         design = "RCT" if article["ml"]["rct"]["is_rct"] else "-"
         
         
+        def check_rct(value, rct):
 
+            return value if rct else BIAS_MAP['?']
+
+        is_rct = article["ml"]["rct"]["is_rct"]
         random_sequence_generation = {
             "domain": article["ml"]["bias"][0]["domain"],
             "judgement": article["ml"]["bias"][0]["judgement"],
-            "label": BIAS_MAP[article["ml"]["bias"][0]["judgement"]]["label"],
-            "score": BIAS_MAP[article["ml"]["bias"][0]["judgement"]]["score"],
+            "label": check_rct( BIAS_MAP[article["ml"]["bias"][0]["judgement"]], is_rct)["label"],
+            "score": check_rct( BIAS_MAP[article["ml"]["bias"][0]["judgement"]], is_rct)["score"],
         }
 
-        bias["random_sequence_generation"][trial] = BIAS_MAP[article["ml"]["bias"][0]["judgement"]]["score"]
+        bias["random_sequence_generation"][trial] = check_rct( BIAS_MAP[article["ml"]["bias"][0]["judgement"]], is_rct)["score"]
 
         allocation_concealment = {
             "domain": article["ml"]["bias"][1]["domain"],
             "judgement": article["ml"]["bias"][1]["judgement"],
-            "label": BIAS_MAP[article["ml"]["bias"][1]["judgement"]]["label"],
-            "score": BIAS_MAP[article["ml"]["bias"][1]["judgement"]]["score"],
+            "label": check_rct( BIAS_MAP[article["ml"]["bias"][1]["judgement"]], is_rct)["label"],
+            "score": check_rct( BIAS_MAP[article["ml"]["bias"][1]["judgement"]], is_rct)["score"],
         }
         
-        bias["allocation_concealment"][trial] = BIAS_MAP[article["ml"]["bias"][1]["judgement"]]["score"]
+        bias["allocation_concealment"][trial] = check_rct( BIAS_MAP[article["ml"]["bias"][1]["judgement"]], is_rct)["score"]
 
         blinding_of_participants_and_personnel = {
             "domain": article["ml"]["bias"][2]["domain"],
             "judgement": article["ml"]["bias"][2]["judgement"],
-            "label": BIAS_MAP[article["ml"]["bias"][2]["judgement"]]["label"],
-            "score": BIAS_MAP[article["ml"]["bias"][2]["judgement"]]["score"],
+            "label": check_rct( BIAS_MAP[article["ml"]["bias"][2]["judgement"]], is_rct)["label"],
+            "score": check_rct( BIAS_MAP[article["ml"]["bias"][2]["judgement"]], is_rct)["score"],
         }
         
-        bias["blinding_of_participants_and_personnel"][trial] = BIAS_MAP[article["ml"]["bias"][2]["judgement"]]["score"]
+        bias["blinding_of_participants_and_personnel"][trial] = check_rct( BIAS_MAP[article["ml"]["bias"][2]["judgement"]], is_rct)["score"]
 
 
         blinding_of_outcome_assessment = {
             "domain": article["ml"]["bias"][3]["domain"],
             "judgement": article["ml"]["bias"][3]["judgement"],
-            "label": BIAS_MAP[article["ml"]["bias"][3]["judgement"]]["label"],
-            "score": BIAS_MAP[article["ml"]["bias"][3]["judgement"]]["score"],
+            "label": check_rct( BIAS_MAP[article["ml"]["bias"][3]["judgement"]], is_rct)["label"],
+            "score": check_rct( BIAS_MAP[article["ml"]["bias"][3]["judgement"]], is_rct)["score"],
         }
         
-        bias["blinding_of_outcome_assessment"][trial] = BIAS_MAP[article["ml"]["bias"][3]["judgement"]]["score"]
+        bias["blinding_of_outcome_assessment"][trial] = check_rct( BIAS_MAP[article["ml"]["bias"][3]["judgement"]], is_rct)["score"]
         count= count+1
-        is_rct = article['ml']['rct']['is_rct']
         response.append({
             "file": file, 
             'is_rct':is_rct,
             "sample_size": sample_size,
             "trial": trial,
             "design": design,
-            "random_sequence_generation": random_sequence_generation,
-            "allocation_concealment": allocation_concealment,
-            "blinding_of_participants_and_personnel": blinding_of_participants_and_personnel,
-            "blinding_of_outcome_assessment": blinding_of_outcome_assessment,
+            "random_sequence_generation": random_sequence_generation if is_rct else start_bias(),
+            "allocation_concealment": allocation_concealment if is_rct else start_bias(),
+            "blinding_of_participants_and_personnel": blinding_of_participants_and_personnel if is_rct else start_bias(),
+            "blinding_of_outcome_assessment": blinding_of_outcome_assessment if is_rct else start_bias(),
         })
     return response, bias, partial_n, authors
 
@@ -167,9 +172,18 @@ def downgrade_num_participantes( row ):
         return -1
     if ( int(sample_size) >= 1 and int(sample_size) <= 99 ):
         return -2
-    
-def downgrade_risco_vies( row ):
 
+def check_numeric( val ):
+  try:
+    x = isinstance(float(val), float)
+    return x
+  except:
+    return False
+    
+    
+        
+def downgrade_risco_vies( row, total ):
+    size = float(row["sample_size"]) if check_numeric(row["sample_size"]) else 10    
     target = [
         "allocation_concealment",
         "blinding_of_outcome_assessment",
@@ -177,10 +191,13 @@ def downgrade_risco_vies( row ):
         "random_sequence_generation"
     ]
     count = 0
+    
     for t in target:
-        count = count + (row[t]["score"] * 0.25)
+        count = count + (row[t]["score"] )
 
-    return 0 if count >= 0.5 else -1
+    value = 1 if count >= 2 else 0
+    n_total = size/total
+    return n_total * value * 100
 
 def downgrade_risco_vies_json( row ):
 
@@ -202,29 +219,18 @@ def downgrade_risco_vies_json( row ):
     return result
 
 
-def calc_score(part):
+def calc_score(part, n_samples):
     sample_size = part["sample_size"]
     trial = part["trial"]
     downgrade_n_participantes = downgrade_num_participantes(part)
-    risco_vies = downgrade_risco_vies(part)
+    risco_vies = downgrade_risco_vies(part, n_samples)
     risco_vies_json = downgrade_risco_vies_json(part)
     return trial, downgrade_n_participantes, risco_vies, risco_vies_json
 
 
 @app.route("/comparators", methods=['POST'])
 def save_comparators():
-    """
-    [
-        {
-            comparators: {
-                outcome: string,
-                intervention: string,
-                comparator: string
-            },
-            files: []
-        }
-    ]
-    """
+
     if 'uid' not in request.form:
         return Error.body('No UID passed')
     
@@ -325,6 +331,12 @@ def handle_robot_reviewer_job(uid):
     return Success.body('ok' )
 
 
+def calc_heterogeneity(i):
+    if i <= 30:
+        return 0
+    if i > 30 and i < 75:
+        return -1
+    return -2
 
 @app.route("/comparators-calc/<uid>", methods=['GET'])
 def comparators_calc(uid):
@@ -347,7 +359,7 @@ def comparators_calc(uid):
             key_list.append(f"{comp.intervention}")
         if comp.comparator:
             key_list.append(f"{comp.comparator}")
-        key = ",".join(key_list)
+        key = "|".join(key_list)
         if key not in comparatos_list:
             comparatos_list.add(key)
             result[key] = { 
@@ -368,9 +380,15 @@ def comparators_calc(uid):
             result_json = json.load(f)
 
         data = result_json
+        total = 0
+        for i in data['article_data']:
+            total = total + float(i['ml']['sample_size'] if check_numeric(i['ml']['sample_size']) else 10) 
+
         result1, bias, sample, authors = calc(data, result[r]['key'], files)
+        risco_vies_total = 0
         for response in result1:
-            trial, downgrade_n_participantes, risco_vies, risco_vies_json= calc_score(response)
+            trial, downgrade_n_participantes, risco_vies, risco_vies_json= calc_score(response, total)
+            risco_vies_total = risco_vies_total + risco_vies
             final_result[r]["downgrade_n_participantes"] = downgrade_n_participantes
             final_result[r]["risco_vies"] = risco_vies
             final_result[r]["risco_vies_json"] = risco_vies_json
@@ -382,6 +400,9 @@ def comparators_calc(uid):
         final_result[r]["comparator"] = result[r]["comparator"]
         final_result[r]["bias"] = bias
         final_result[r]["sample"] = sample
+        final_result[r]["risco_vies_total"] = risco_vies_total
+        final_result[r]["i2"] = 75
+        final_result[r]["i2_score"] = calc_heterogeneity(75)
 
     systematic_review = SystematicReview.find_id(uid)
     i2_str = systematic_review[0].result
@@ -389,15 +410,23 @@ def comparators_calc(uid):
     i2 = ast.literal_eval(i2_str)
     
     i2_result = dict()
+    
     for i in i2:
         for r in final_result:
-            tags = r.split(',')
-            i_np = np.array(i[:-2])
+            tags = r.split('|')
+            i_np = i[0][:-1]
             tag_np = np.array(tags)
-            if np.isin(i_np, tag_np).all():
-                final_result[r]["i2"] = i[len(i)-2]
-                final_result[r]["i2_score"] = i[len(i)-1]
-
+            if i_np in tag_np:
+                value = i[len(i)-1]
+                if '=' in value:
+                    value = value.split('=')[1]
+                    value = re.sub(r'[^0-9\.\,]', '', value)
+                    value = float(value)
+                else:
+                    value = 75
+                final_result[r]["i2"] = value
+                final_result[r]["i2_score"] = calc_heterogeneity(value)
+                
    
     text = PdfMiner.convert_pdf_to_string(path)
 
@@ -427,7 +456,7 @@ def comparators_calc(uid):
         final_result[r]["risco_vies_json"]["result"] = final_result[r]["amstar_score"]
         final_result[r]["i2_json"] = dict()
         final_result[r]["i2_json"]["heterogeneity"] = dict()
-        final_result[r]["i2_json"]["heterogeneity"]["i2"] = final_result[r]["i2"].replace('I2', '').replace('I²', '').replace('=','').replace(' ','') if "i2" in final_result[r] else 0
+        final_result[r]["i2_json"]["heterogeneity"]["i2"] = final_result[r]["i2"]
         final_result[r]["i2_json"]["heterogeneity"]["result"] = final_result[r]["i2_score"]
         
         _json=dict()
@@ -453,6 +482,7 @@ def comparators_calc(uid):
         _json["result"]["amstar"] = amstar_saida
         _json["result"]["amstar_result"] = amstar_values[4]
         _json["result"]["is_rct"] = final_result[r]["is_rct"]
+        _json["result"]["risco_vies_total"] = final_result[r]["risco_vies_total"]
 
         final_json.append(_json)
     
