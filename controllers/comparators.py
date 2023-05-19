@@ -332,10 +332,14 @@ def handle_robot_reviewer_job(uid):
 
 
 def calc_heterogeneity(i):
+    print('--')
     if i <= 30:
+        print(i, '0')
         return 0
     if i > 30 and i < 75:
+        print(i, -1)
         return -1
+    print(i, -2)
     return -2
 
 @app.route("/comparators-calc/<uid>", methods=['GET'])
@@ -418,14 +422,14 @@ def comparators_calc(uid):
             tag_np = np.array(tags)
             if i_np in tag_np:
                 value = i[len(i)-1]
+                print('i2 value', value)
                 if '=' in value:
                     value = value.split('=')[1]
                     value = re.sub(r'[^0-9\.\,]', '', value)
                     value = float(value)
-                else:
-                    value = 75
+
                 final_result[r]["i2"] = value
-                final_result[r]["i2_score"] = calc_heterogeneity(value)
+                final_result[r]["i2_score"] = calc_heterogeneity(float(str(value)))
                 
    
     text = PdfMiner.convert_pdf_to_string(path)
