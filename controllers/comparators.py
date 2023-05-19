@@ -36,9 +36,9 @@ def calc(str, key, files):
         }
     response = []
     BIAS_MAP = {
-        "high/unclear": { "score": 0, "label": "+" },
-        "low": { "score": 1, "label": "?" },
-        "?": { "score": 0, "label": "?" },
+        "high/unclear": { "score": 1, "label": "+" },
+        "low": { "score": 0, "label": "?" },
+        "?": { "score": 1, "label": "?" },
     }
     partial_n = dict()
     partial_n["items"] = dict()
