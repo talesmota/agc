@@ -33,7 +33,7 @@ def extract_dict(texto, frase1, frase2):
 
 def extract_heterogeneity(texto):
 
-    pattern = r"Heterogeneity:\s*[^\n\%]*(Not?|%?|\n)"
+    pattern = r"Heterogeneity:.*?(\d+\.?\d*%|Not|NA|N/A)"
 
     heterogeneitys = []
     i2 = I2.I2()
@@ -43,12 +43,14 @@ def extract_heterogeneity(texto):
         i2_text = i2.parser(match.group(0))
         if len(i2_text):
             valor = i2_text[0]
+            if '=' in valor:
+                valor = re.sub('[^0-9\.\,]','', valor.split('=')[1])
             posicao = match.start()
             heterogeneitys.append([valor, posicao])
 
-    regex = r'[^;]*$'
+    # regex = r'[^;]*$'
     # print(texto)
-    heterogeneitys = [[re.findall(regex, elemento[0])[0].strip(), elemento[1]] for elemento in heterogeneitys]
+    # heterogeneitys = [[re.findall(regex, elemento[0])[0].strip(), elemento[1]] for elemento in heterogeneitys]
     return heterogeneitys
 
 def handle_i2_from_db(file, outcome_list, comparators_list):

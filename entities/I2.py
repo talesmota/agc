@@ -6,6 +6,10 @@ class I2:
     def __init__(self):
         self.patterns = set([
             "[Ii]\n?\ ?[²2]\s*[=]\s*\d*[.,]?\d*\%",
+            'Not applicable',
+            'Not Applicable',
+            'NA',
+            'N/A'
         ])
   
     def parser(self, text):
