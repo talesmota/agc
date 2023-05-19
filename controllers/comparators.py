@@ -401,13 +401,13 @@ def comparators_calc(uid):
             final_result[r]["risco_vies_json"] = risco_vies_json
             final_result[r]["i2_score"] = 0
             final_result[r]["is_rct"] = response['is_rct']
-
+        print('risco_vies_total', risco_vies_total)
         final_result[r]["outcome"] = result[r]["outcome"]
         final_result[r]["intervention"] = result[r]["intervention"]
         final_result[r]["comparator"] = result[r]["comparator"]
         final_result[r]["bias"] = bias
         final_result[r]["sample"] = sample
-        final_result[r]["risco_vies_total"] = 0 if risco_vies_total >= 75 else 0
+        final_result[r]["risco_vies_total"] = 0 if risco_vies_total >= 75 else -1
         final_result[r]["i2"] = 75
         final_result[r]["i2_score"] = calc_heterogeneity(75)
 
