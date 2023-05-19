@@ -163,8 +163,10 @@ def calc(str, key, files):
 
 def downgrade_num_participantes( row ):
     sample_size = row["sample_size"]
+    print('sample_size', sample_size)
     downgrade = 0
     if "?" in  sample_size:
+        print('sample_size', -2)
         return -2
     if ( int(sample_size) >= 200 ):
         return 0
@@ -487,6 +489,7 @@ def comparators_calc(uid):
         _json["result"]["amstar_result"] = amstar_values[4]
         _json["result"]["is_rct"] = final_result[r]["is_rct"]
         _json["result"]["risco_vies_total"] = final_result[r]["risco_vies_total"]
+        _json["result"]["final_score"] = final_result[r]["final_score"]
 
         final_json.append(_json)
     
