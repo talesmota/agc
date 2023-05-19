@@ -36,9 +36,9 @@ def calc(str, key, files):
         }
     response = []
     BIAS_MAP = {
-        "high/unclear": { "score": 1, "label": "+" },
-        "low": { "score": 0, "label": "?" },
-        "?": { "score": 1, "label": "?" },
+        "high/unclear": { "score": 0, "label": "+" },
+        "low": { "score": 1, "label": "?" },
+        "?": { "score": 0, "label": "?" },
     }
     partial_n = dict()
     partial_n["items"] = dict()
@@ -199,7 +199,8 @@ def downgrade_risco_vies( row, total ):
 
     value = 1 if count >= 2 else 0
     n_total = size/total
-    return n_total * value * 100
+    rv = n_total * value * 100
+    return rv
 
 def downgrade_risco_vies_json( row ):
 
@@ -406,7 +407,7 @@ def comparators_calc(uid):
         final_result[r]["comparator"] = result[r]["comparator"]
         final_result[r]["bias"] = bias
         final_result[r]["sample"] = sample
-        final_result[r]["risco_vies_total"] = risco_vies_total
+        final_result[r]["risco_vies_total"] = 0 if risco_vies_total >= 75 else 0
         final_result[r]["i2"] = 75
         final_result[r]["i2_score"] = calc_heterogeneity(75)
 
@@ -458,7 +459,7 @@ def comparators_calc(uid):
     final_json = []
     for r in final_result:
         final_result[r]["amstar_score"] = amstar_score
-        final_result[r]["final_score"] = final_result[r]["risco_vies"] + final_result[r]["downgrade_n_participantes"] + final_result[r]["i2_score"] + amstar_score
+        final_result[r]["final_score"] = final_result[r]["risco_vies_total"] + final_result[r]["downgrade_n_participantes"] + final_result[r]["i2_score"] + amstar_score
         final_result[r]["risco_vies_json"]["result"] = final_result[r]["amstar_score"]
         final_result[r]["i2_json"] = dict()
         final_result[r]["i2_json"]["heterogeneity"] = dict()
