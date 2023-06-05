@@ -13,7 +13,7 @@ import requests
 import time
 import ast
 import numpy as np
-from infra import PdfMiner
+from infra import PdfPlumber
 from entities.URL import URL
 import re
 
@@ -365,8 +365,8 @@ def extractTextToExtract(texto, comparison, outcome):
   outcome = outcome.replace('(','\(').replace(')','\)').replace('%', '\%')
 
   ptr = rf'{comparison}(.*){outcome}'
-  print(ptr)
   listItems = re.finditer( ptr, texto, re.MULTILINE)
+  
 
   max_position = 0
   max_i = 0
@@ -384,7 +384,6 @@ def extractTextToExtract(texto, comparison, outcome):
     listItems2 = re.finditer( ptr2, text_cortado, re.MULTILINE)
     next_heterogeneity = next(listItems2).span()[1]
     text_cortado = texto[max_position: max_position+next_heterogeneity]
-    print('=>', text_cortado)
 
   return text_cortado
 
@@ -485,7 +484,7 @@ def comparators_calc(uid):
                     final_result[r]["i2_score"] = calc_heterogeneity(float(str(value)))
                     
     
-    text = PdfMiner.convert_pdf_to_string(path)
+    text = PdfPlumber.convert_pdf_to_string(path)
 
     amstar = Amstar(text)
     amstar_result = amstar.result()
@@ -552,18 +551,21 @@ def comparators_calc(uid):
             t = [('?', '?')]            
         if "?" in _json["result"]["number_of_participants"]['items']:
             _json["result"]["number_of_participants"]['items'].pop("?")
+
         total = _json["result"]["number_of_participants"]['total']
+
         if (total == 0 or '?' in total) and t[0][0] != '?':
             _json["result"]["number_of_participants"]['total'] = int(t[0][0])+int(t[0][1])
             _total = _json["result"]["number_of_participants"]['total']
             size_zero = len(list(filter( 
-                lambda x: x ==0,
+                lambda x: x ==0 or x == "???",
                 _json["result"]["number_of_participants"]["items"].values()
             )))
+
             if size_zero > 0:
                 for i in _json["result"]["number_of_participants"]["items"].keys():
-                    if _json["result"]["number_of_participants"]["items"][i] == 0:
-                        _json["result"]["number_of_participants"]["items"][i] = float(str(_total)) / float(str(size_zero))
+                    if _json["result"]["number_of_participants"]["items"][i] == 0 or _json["result"]["number_of_participants"]["items"][i] == "???":
+                        _json["result"]["number_of_participants"]["items"][i] = int(float(str(_total)) / float(str(size_zero)))
         
         final_json.append(_json)
     
