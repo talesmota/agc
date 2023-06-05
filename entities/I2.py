@@ -5,16 +5,19 @@ class I2:
 
     def __init__(self):
         self.patterns = set([
-            "[Ii]\n?\ ?[²2]\s*[=]\s*\d*[.,]?\d*\%",
-            'Not applicable',
-            'Not Applicable',
-            'NA',
-            'N/A'
+            # "[Ii]\n?\ ?[²2]\s*[=]\s*\d*[.,]?\d*\%",
+            # 'Not applicable',
+            # 'Not Applicable',
+            # 'NA',
+            # 'N/A'
+            "Heterogeneity:.*?(\d+\.?\d*%|Not|NA|N/A)",
         ])
   
     def parser(self, text):
         patternsFinded = []
         text = text.replace("²","2")
+        text = text.replace("\n", "")
+        text = text.replace("\t", "")
         for reg in self.patterns:
             patternsFinded.append( re.findall(reg, text ))
 

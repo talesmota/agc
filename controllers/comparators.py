@@ -345,6 +345,49 @@ def calc_heterogeneity(i):
     print(i, -2)
     return -2
 
+def extractTotal(text):
+  padrao1 = r"Total \((.*) CI\)"
+  padrao2 = r"Subtotal(?: \([^)]*\))?[\s\*]+(\d+(?:\s\d+)*)\s100(?:\.0)?%"
+
+  texto_cortado = text
+  listanpart = re.finditer(padrao1, texto_cortado, re.MULTILINE)
+  position = next(listanpart).span()
+  total_line = texto_cortado[position[1]: position[1]+ 50].split()
+  print('-->', total_line)
+
+  if listanpart and len(total_line) > 1:
+      return [(total_line[0], total_line[1])]
+  return [('?','?')]
+
+
+def extractTextToExtract(texto, comparison, outcome):
+  comparison = comparison.replace('(','\(').replace(')','\)').replace('%', '\%')
+  outcome = outcome.replace('(','\(').replace(')','\)').replace('%', '\%')
+
+  ptr = rf'{comparison}(.*){outcome}'
+  print(ptr)
+  listItems = re.finditer( ptr, texto, re.MULTILINE)
+
+  max_position = 0
+  max_i = 0
+  text_cortado=''
+  
+  for i in listItems:
+    mmax = i.span()[1]
+    if mmax >= max_position:
+      max_position = mmax
+      max_i = i
+
+  if listItems:
+    text_cortado = texto[max_position: max_position+1500]
+    ptr2 = rf'Heterogeneity'
+    listItems2 = re.finditer( ptr2, text_cortado, re.MULTILINE)
+    next_heterogeneity = next(listItems2).span()[1]
+    text_cortado = texto[max_position: max_position+next_heterogeneity]
+    print('=>', text_cortado)
+
+  return text_cortado
+
 @app.route("/comparators-calc/<uid>", methods=['GET'])
 def comparators_calc(uid):
     comparators_results = ComparatorsResults.find_results(uid)
@@ -376,6 +419,7 @@ def comparators_calc(uid):
                 "comparator": comp.comparator,
                 'key': file_key
             }
+            print(result[key])
 
     final_result = dict()
     authors = dict()
@@ -401,7 +445,7 @@ def comparators_calc(uid):
             final_result[r]["risco_vies_json"] = risco_vies_json
             final_result[r]["i2_score"] = 0
             final_result[r]["is_rct"] = response['is_rct']
-        print('risco_vies_total', risco_vies_total)
+        
         final_result[r]["outcome"] = result[r]["outcome"]
         final_result[r]["intervention"] = result[r]["intervention"]
         final_result[r]["comparator"] = result[r]["comparator"]
@@ -417,24 +461,30 @@ def comparators_calc(uid):
     i2 = ast.literal_eval(i2_str)
     
     i2_result = dict()
-    
-    for i in i2:
-        for r in final_result:
-            tags = r.split('|')
-            i_np = i[0][:-1]
-            tag_np = np.array(tags)
-            if i_np in tag_np:
-                value = i[len(i)-1]
-                print('i2 value', value)
-                if '=' in value:
-                    value = value.split('=')[1]
-                    value = re.sub(r'[^0-9\.\,]', '', value)
-                    value = float(value)
 
-                final_result[r]["i2"] = value
-                final_result[r]["i2_score"] = calc_heterogeneity(float(str(value)))
-                
-   
+    if len(final_result[r]["sample"]['items']) == 1:
+        final_result[r]["i2"] = 'N/A'
+        final_result[r]["i2_score"] = calc_heterogeneity(float(str(75)))
+    else:
+        for i in i2:
+            for r in final_result:
+                tags = r.split('|')
+                i_np = i[0][:-1]
+                tag_np = np.array(tags)
+                if i_np in tag_np:
+                    value = i[len(i)-1]
+                    print('i2 value', value)
+                    if '=' in value:
+                        value = value.split('=')[1]
+                        value = re.sub(r'[^0-9\.\,]', '', value)
+                        value = float(value)
+                    if 'N/A' in value or 'Not' in value:
+                        value = 75
+
+                    final_result[r]["i2"] = value
+                    final_result[r]["i2_score"] = calc_heterogeneity(float(str(value)))
+                    
+    
     text = PdfMiner.convert_pdf_to_string(path)
 
     amstar = Amstar(text)
@@ -454,6 +504,7 @@ def comparators_calc(uid):
     for i in range(4):
         amstar_saida["items"][f'item{(1+i)}'] = amstar_values[i]
 
+    
 
 
     final_json = []
@@ -465,6 +516,7 @@ def comparators_calc(uid):
         final_result[r]["i2_json"]["heterogeneity"] = dict()
         final_result[r]["i2_json"]["heterogeneity"]["i2"] = final_result[r]["i2"]
         final_result[r]["i2_json"]["heterogeneity"]["result"] = final_result[r]["i2_score"]
+        
         
         _json=dict()
         _json["values"] = [
@@ -492,6 +544,27 @@ def comparators_calc(uid):
         _json["result"]["risco_vies_total"] = final_result[r]["risco_vies_total"]
         _json["result"]["final_score"] = final_result[r]["final_score"]
 
+        t = [('?', '?')]
+        try:
+            text_cortado = extractTextToExtract(text, final_result[r]["comparator"], final_result[r]["outcome"])
+            t = extractTotal(text_cortado)
+        except:
+            t = [('?', '?')]            
+        if "?" in _json["result"]["number_of_participants"]['items']:
+            _json["result"]["number_of_participants"]['items'].pop("?")
+        total = _json["result"]["number_of_participants"]['total']
+        if (total == 0 or '?' in total) and t[0][0] != '?':
+            _json["result"]["number_of_participants"]['total'] = int(t[0][0])+int(t[0][1])
+            _total = _json["result"]["number_of_participants"]['total']
+            size_zero = len(list(filter( 
+                lambda x: x ==0,
+                _json["result"]["number_of_participants"]["items"].values()
+            )))
+            if size_zero > 0:
+                for i in _json["result"]["number_of_participants"]["items"].keys():
+                    if _json["result"]["number_of_participants"]["items"][i] == 0:
+                        _json["result"]["number_of_participants"]["items"][i] = float(str(_total)) / float(str(size_zero))
+        
         final_json.append(_json)
     
     return Success.body(final_json)

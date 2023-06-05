@@ -13,7 +13,7 @@ from entities.Review import Review
 from entities.SystematicReview import SystematicReview
 from entities.Comparators import Comparators
 from entities.FinalReview import FinalReview
-from infra import I2ExtractNew as I2Extract
+from infra import I2Extract3 as I2Extract
 # from infra import I2Extract
 import pickle
 
@@ -75,13 +75,10 @@ def systematic_review_bot_i2(uid):
         interventions_list.add(comparator.intervention)
 
     filepath = reviews[0].path
+    print('-')
     result = I2Extract.handle_i2_from_db(filepath, list(outcomes_list), list(interventions_list))
     
-    # result_str = [list(r) for r in list(result)] 
-
-    # result_str = ', '.join(map(str, map(str, result)))
     result_str = f'{result}'
-    # print(result_str)
     
     SystematicReview.upadte_i2( uid, result_str)
 
