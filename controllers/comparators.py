@@ -163,10 +163,10 @@ def calc(str, key, files):
 
 def downgrade_num_participantes( row ):
     sample_size = row["sample_size"]
-    print('sample_size', sample_size)
+    # print('sample_size', sample_size)
     downgrade = 0
     if "?" in  sample_size:
-        print('sample_size', -2)
+        # print('sample_size', -2)
         return -2
     if ( int(sample_size) >= 200 ):
         return 0
@@ -305,18 +305,18 @@ def handle_robot_reviewer_job(uid):
 
     url_check = f'http://{URL}:5050/annotate_status/{report_uuid}'
     response_check = requests.get( url_check).json()
-    print(f'response_check: {response_check}')
+    # print(f'response_check: {response_check}')
 
     complete = False
    
-    print(report_uuid)
+    # print(report_uuid)
 
     if 'meta' in response_check and response_check['meta'] is not None:
         for i in range(1, 51):
             if response_check['meta']['process_percentage'] != 100:
                 time.sleep(2)
                 response_check = requests.get( url_check).json()
-                print(f'response_check: {response_check}')
+                # print(f'response_check: {response_check}')
             if response_check['meta']['process_percentage'] == 100:
                 complete = True
                 break
@@ -328,21 +328,21 @@ def handle_robot_reviewer_job(uid):
                 f.write(response_result)
             response_result = f'{UPLOAD_FOLDER}/{report_uuid}.json'
 
-            print( f'response_result: {response_result}')
+            # print( f'response_result: {response_result}')
             Comparators.update_uid_result( uid, response_result)
-    print(report_uuid)
+    # print(report_uuid)
     return Success.body('ok' )
 
 
 def calc_heterogeneity(i):
-    print('--')
+    # print('--')
     if i <= 30:
-        print(i, '0')
+        # print(i, '0')
         return 0
     if i > 30 and i < 75:
-        print(i, -1)
+        # print(i, -1)
         return -1
-    print(i, -2)
+    # print(i, -2)
     return -2
 
 def extractTotal(text):
@@ -353,7 +353,7 @@ def extractTotal(text):
   listanpart = re.finditer(padrao1, texto_cortado, re.MULTILINE)
   position = next(listanpart).span()
   total_line = texto_cortado[position[1]: position[1]+ 50].split()
-  print('-->', total_line)
+#   print('-->', total_line)
 
   if listanpart and len(total_line) > 1:
       return [(total_line[0], total_line[1])]
@@ -418,7 +418,7 @@ def comparators_calc(uid):
                 "comparator": comp.comparator,
                 'key': file_key
             }
-            print(result[key])
+            # print(result[key])
 
     final_result = dict()
     authors = dict()
@@ -458,7 +458,7 @@ def comparators_calc(uid):
     i2_str = systematic_review[0].result
     path = systematic_review[0].path
     i2 = ast.literal_eval(i2_str)
-    
+    # print( 'I2: ', i2)
     i2_result = dict()
 
     if len(final_result[r]["sample"]['items']) == 1:
@@ -468,18 +468,22 @@ def comparators_calc(uid):
         for i in i2:
             for r in final_result:
                 tags = r.split('|')
-                i_np = i[0][:-1]
+                i_np = i[0]
                 tag_np = np.array(tags)
+                # print( f'----: \n\tr:{r}\ttags:{tags}\n\ti_np:{i_np}\n\ttag_np:{tag_np}\n\n')
                 if i_np in tag_np:
                     value = i[len(i)-1]
-                    print('i2 value', value)
-                    if '=' in value:
-                        value = value.split('=')[1]
-                        value = re.sub(r'[^0-9\.\,]', '', value)
-                        value = float(value)
+                    # print('i2 value', value)
                     if 'N/A' in value or 'Not' in value:
                         value = 75
-
+                    elif '=' in value :
+                        value = value.split('=')[1]
+                        value = re.sub(r'[^0-9\.\,]', '', value)
+                        
+                    elif '%' in str(value):
+                        value = re.sub(r'[^0-9\.\,]', '', value)
+                    
+                    value = float(value)
                     final_result[r]["i2"] = value
                     final_result[r]["i2_score"] = calc_heterogeneity(float(str(value)))
                     
@@ -556,6 +560,7 @@ def comparators_calc(uid):
 
         if (total == 0 or '?' in total) and t[0][0] != '?':
             _json["result"]["number_of_participants"]['total'] = int(t[0][0])+int(t[0][1])
+            _json["result"]["number_of_participants"]['result'] = int(t[0][0])+int(t[0][1])
             _total = _json["result"]["number_of_participants"]['total']
             size_zero = len(list(filter( 
                 lambda x: x ==0 or x == "???",

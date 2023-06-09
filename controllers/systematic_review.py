@@ -65,18 +65,20 @@ def save():
 def systematic_review_bot_i2(uid):
     reviews = SystematicReview.find_id(uid)
     comparators = Comparators.find_id(uid)
-    outcomes_list = set()
-    comparators_list = set()
-    interventions_list = set()
+    outcomes_list = []
+    comparators_list = []
+    interventions_list = []
 
     for comparator in comparators:
-        outcomes_list.add(comparator.outcome)
-        comparators_list.add(comparator.comparator)
-        interventions_list.add(comparator.intervention)
+        outcomes_list.append(comparator.outcome)
+        comparators_list.append(comparator.comparator)
+        interventions_list.append(comparator.intervention)
 
     filepath = reviews[0].path
-    print('-')
-    result = I2Extract.handle_i2_from_db(filepath, list(outcomes_list), list(interventions_list))
+    set_outcome_comparator = list(set(zip(outcomes_list, comparators_list)))
+    outcomes_list2 = list(map( lambda x: x[0], set_outcome_comparator))
+    comparators_list2 = list(map( lambda x: x[1], set_outcome_comparator))
+    result = I2Extract.handle_i2_from_db(filepath, outcomes_list2, comparators_list2)
     
     result_str = f'{result}'
     
