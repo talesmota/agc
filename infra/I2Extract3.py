@@ -5,9 +5,6 @@ from entities import I2
 # import pprint as pp
 
 def extract_dict(texto, frase1, frase2):
-    outcomes = []
-    comparisons = []
-    totais = []
     frase3 = "100%"
     frase4 = "100.0%"
 
@@ -25,7 +22,7 @@ def extract_dict(texto, frase1, frase2):
             break
     # print('--')
     i = 0
-    while i < len(texto) and len(frase2) > 5:       
+    while i < len(texto):       
         i_frase2 = texto.find(frase2, i)
         if i_frase2 != -1:
             comparisons.append([frase2, i_frase2])
@@ -48,17 +45,17 @@ def extract_dict(texto, frase1, frase2):
             break
     # print('extract dict end')
 
-    menor_tamanho = min([len(outcomes), len(totais), len(comparisons)])
-    # print('menor_tamanho: ', menor_tamanho)
+    # menor_tamanho = min([len(outcomes), len(totais), len(comparisons)])
+    # # print('menor_tamanho: ', menor_tamanho)
 
-    ini_outcome = len(outcomes) - menor_tamanho
-    ini_outcome = ini_outcome if ini_outcome > 1 else 0
+    # ini_outcome = len(outcomes) - menor_tamanho
+    # ini_outcome = ini_outcome if ini_outcome > 1 else 0
 
-    ini_comparisons = len(comparisons) - menor_tamanho
-    ini_comparisons = ini_comparisons if ini_comparisons > 1 else 0
+    # ini_comparisons = len(comparisons) - menor_tamanho
+    # ini_comparisons = ini_comparisons if ini_comparisons > 1 else 0
 
-    ini_totais = len(totais) - menor_tamanho
-    ini_totais = ini_totais if ini_totais > 1 else 0
+    # ini_totais = len(totais) - menor_tamanho
+    # ini_totais = ini_totais if ini_totais > 1 else 0
 
     
 
@@ -67,9 +64,7 @@ def extract_dict(texto, frase1, frase2):
     # print( 'comparisons: ', len(comparisons[ini_comparisons:]) )
     # print( 'totais: ', len(totais[ini_totais:]) )
     
-    return outcomes[ini_outcome:], \
-        comparisons[ini_comparisons:],  \
-        totais[ini_totais:]
+    return outcomes,comparisons,totais
 
 def extract_heterogeneity(texto):
 
