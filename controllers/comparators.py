@@ -24,7 +24,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 def allowed_file(filename):
     return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+        filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def calc(str, key, files):
@@ -67,7 +67,8 @@ def calc(str, key, files):
         if "?" in sample_size:
             partial_n["result"] = -1
         else:
-            partial_n["result"] = int(partial_n["result"]) + int(sample_size)
+            partial_n["result"] = int(
+                partial_n["result"]) + int(sample_size)
 
         try:
             author = article["grobid"]["authors"][0]
@@ -166,7 +167,7 @@ def calc(str, key, files):
 
 def downgrade_num_participantes(row):
     sample_size = row["sample_size"]
-    # print('sample_size', sample_size)
+    print('sample_size', sample_size)
     downgrade = 0
     if "?" in sample_size:
         # print('sample_size', -2)
@@ -198,13 +199,20 @@ def downgrade_risco_vies(row, total):
     ]
     count = 0
 
+    str_t = ''
     for t in target:
+        str_t += f'{str_t}\t{row[t]["score"]}'
         count = count + (row[t]["score"])
 
-    value = 1 if count >= 2 else 0
+    value = count
     n_total = size/total
     rv = n_total * value * 100
-    return rv
+
+    if rv >= 0.75:
+        return 0
+    elif rv >= 0.3 and rv < 0.75:
+        return -1
+    return -2
 
 
 def downgrade_risco_vies_json(row):
@@ -369,7 +377,8 @@ def extractTotal(text):
 def extractTextToExtract(texto, comparison, outcome):
     comparison = comparison.replace(
         '(', '\(').replace(')', '\)').replace('%', '\%')
-    outcome = outcome.replace('(', '\(').replace(')', '\)').replace('%', '\%')
+    outcome = outcome.replace(
+        '(', '\(').replace(')', '\)').replace('%', '\%')
 
     ptr = rf'{comparison}(.*){outcome}'
     listItems = re.finditer(ptr, texto, re.MULTILINE)
@@ -443,12 +452,13 @@ def comparators_calc(uid):
                 float(i['ml']['sample_size'] if check_numeric(
                     i['ml']['sample_size']) else 10)
 
-        result1, bias, sample, authors = calc(data, result[r]['key'], files)
+        result1, bias, sample, authors = calc(
+            data, result[r]['key'], files)
         risco_vies_total = 0
         for response in result1:
             trial, downgrade_n_participantes, risco_vies, risco_vies_json = calc_score(
                 response, total)
-            risco_vies_total = risco_vies_total + risco_vies
+            risco_vies_total = risco_vies
             final_result[r]["downgrade_n_participantes"] = downgrade_n_participantes
             final_result[r]["risco_vies"] = risco_vies
             final_result[r]["risco_vies_json"] = risco_vies_json
@@ -460,7 +470,7 @@ def comparators_calc(uid):
         final_result[r]["comparator"] = result[r]["comparator"]
         final_result[r]["bias"] = bias
         final_result[r]["sample"] = sample
-        final_result[r]["risco_vies_total"] = 0 if risco_vies_total >= 75 else -1
+        final_result[r]["risco_vies_total"] = risco_vies_total
         final_result[r]["i2"] = 75
         final_result[r]["i2_score"] = calc_heterogeneity(75)
 
@@ -487,17 +497,25 @@ def comparators_calc(uid):
                     print('i2 value', value)
                     if 'N/A' in value or 'Not' in value:
                         value = 75
+                        value = float(value)
+                        final_result[r]["i2"] = value
+                        final_result[r]["i2_score"] = calc_heterogeneity(
+                            float(str(value)))
+                        final_result[r]["i2"] = 'N/A'
                     elif '=' in value:
                         value = value.split('=')[1]
                         value = re.sub(r'[^0-9\.\,]', '', value)
+                        value = float(value)
+                        final_result[r]["i2"] = value
+                        final_result[r]["i2_score"] = calc_heterogeneity(
+                            float(str(value)))
 
                     elif '%' in str(value):
                         value = re.sub(r'[^0-9\.\,]', '', value)
-                    print('\ti2 value', value, r)
-                    value = float(value)
-                    final_result[r]["i2"] = value
-                    final_result[r]["i2_score"] = calc_heterogeneity(
-                        float(str(value)))
+                        value = float(value)
+                        final_result[r]["i2"] = value
+                        final_result[r]["i2_score"] = calc_heterogeneity(
+                            float(str(value)))
 
     text = PdfPlumber.convert_pdf_to_string(path)
 
