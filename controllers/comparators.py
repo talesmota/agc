@@ -360,17 +360,20 @@ def calc_heterogeneity(i):
 
 
 def extractTotal(text):
-    padrao1 = r"Total \((.*) CI\)"
+    padrao1 = r"Total(?: \([^)]*\))?[\s\*]+(\d+(?:\s\d+)*)\s100(?:\.0)?%"
     padrao2 = r"Subtotal(?: \([^)]*\))?[\s\*]+(\d+(?:\s\d+)*)\s100(?:\.0)?%"
 
-    texto_cortado = text
-    listanpart = re.finditer(padrao1, texto_cortado, re.MULTILINE)
-    position = next(listanpart).span()
-    total_line = texto_cortado[position[1]: position[1] + 50].split()
-#   print('-->', total_line)
+    listanpart = re.findall(padrao1, text, re.MULTILINE)
 
-    if listanpart and len(total_line) > 1:
-        return [(total_line[0], total_line[1])]
+    if not listanpart:
+        listanpart = re.findall(padrao2, text, re.MULTILINE)
+
+    numeros_separados = listanpart[0].split()
+    if len(numeros_separados) > 1:
+        numero1 = int(numeros_separados[0])
+        numero2 = int(numeros_separados[1])
+        return [(numero1, numero2)]
+
     return [('?', '?')]
 
 
@@ -480,42 +483,42 @@ def comparators_calc(uid):
     i2 = ast.literal_eval(i2_str)
     # print( 'I2: ', i2)
     i2_result = dict()
+    for i in i2:
+        for r in final_result:
+            tags = r.split('|')
+            i_np = i[1]
+            tag_np = np.array(tags)
+            # print(
+            #     f'----: \n\tr:{r}\ttags:{tags}\n\ti_np:{i_np}\n\ttag_np:{tag_np}\n\n')
+            if i_np in tag_np:
+                value = i[len(i)-1]
+                print('i2 value', value)
+                if len(final_result[r]["sample"]['items']) == 1:
+                    final_result[r]["i2"] = 'N/A'
+                    final_result[r]["i2_score"] = calc_heterogeneity(
+                        float(str(75)))
+                    continue
+                elif 'N/A' in value or 'Not' in value:
+                    value = 75
+                    value = float(value)
+                    final_result[r]["i2"] = value
+                    final_result[r]["i2_score"] = calc_heterogeneity(
+                        float(str(value)))
+                    final_result[r]["i2"] = 'N/A'
+                elif '=' in value:
+                    value = value.split('=')[1]
+                    value = re.sub(r'[^0-9\.\,]', '', value)
+                    value = float(value)
+                    final_result[r]["i2"] = value
+                    final_result[r]["i2_score"] = calc_heterogeneity(
+                        float(str(value)))
 
-    if len(final_result[r]["sample"]['items']) == 1:
-        final_result[r]["i2"] = 'N/A'
-        final_result[r]["i2_score"] = calc_heterogeneity(float(str(75)))
-    else:
-        for i in i2:
-            for r in final_result:
-                tags = r.split('|')
-                i_np = i[1]
-                tag_np = np.array(tags)
-                # print(
-                #     f'----: \n\tr:{r}\ttags:{tags}\n\ti_np:{i_np}\n\ttag_np:{tag_np}\n\n')
-                if i_np in tag_np:
-                    value = i[len(i)-1]
-                    print('i2 value', value)
-                    if 'N/A' in value or 'Not' in value:
-                        value = 75
-                        value = float(value)
-                        final_result[r]["i2"] = value
-                        final_result[r]["i2_score"] = calc_heterogeneity(
-                            float(str(value)))
-                        final_result[r]["i2"] = 'N/A'
-                    elif '=' in value:
-                        value = value.split('=')[1]
-                        value = re.sub(r'[^0-9\.\,]', '', value)
-                        value = float(value)
-                        final_result[r]["i2"] = value
-                        final_result[r]["i2_score"] = calc_heterogeneity(
-                            float(str(value)))
-
-                    elif '%' in str(value):
-                        value = re.sub(r'[^0-9\.\,]', '', value)
-                        value = float(value)
-                        final_result[r]["i2"] = value
-                        final_result[r]["i2_score"] = calc_heterogeneity(
-                            float(str(value)))
+                elif '%' in str(value):
+                    value = re.sub(r'[^0-9\.\,]', '', value)
+                    value = float(value)
+                    final_result[r]["i2"] = value
+                    final_result[r]["i2_score"] = calc_heterogeneity(
+                        float(str(value)))
 
     text = PdfPlumber.convert_pdf_to_string(path)
 
@@ -586,7 +589,7 @@ def comparators_calc(uid):
 
         total = _json["result"]["number_of_participants"]['total']
 
-        if (total == 0 or '?' in total) and t[0][0] != '?':
+        if (total == 0 or '?' in total) and t[0][0] != '?' and check_numeric(t[0][0]) and check_numeric(t[0][1]):
             _json["result"]["number_of_participants"]['total'] = int(
                 t[0][0])+int(t[0][1])
             _json["result"]["number_of_participants"]['result'] = int(
