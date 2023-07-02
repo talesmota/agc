@@ -165,18 +165,21 @@ def calc(str, key, files):
     return response, bias, partial_n, authors
 
 
-def downgrade_num_participantes(row):
+def downgrade_num_participantes(row, our_total=None):
     sample_size = row["sample_size"]
+    if our_total is not None:
+        sample_size = out_total
+
     print('sample_size', sample_size)
     downgrade = 0
     if "?" in sample_size:
         # print('sample_size', -2)
         return -2
-    if (int(sample_size) >= 200):
+    if (int(sample_size) >= 500):
         return 0
-    if (int(sample_size) >= 100 and int(sample_size) <= 199):
+    if (int(sample_size) >= 100 and int(sample_size) <= 499):
         return -1
-    if (int(sample_size) >= 1 and int(sample_size) <= 99):
+    if (int(sample_size) >= 0 and int(sample_size) <= 99):
         return -2
 
 
@@ -204,7 +207,11 @@ def downgrade_risco_vies(row, total):
         str_t += f'{str_t}\t{row[t]["score"]}'
         count = count + (row[t]["score"])
 
-    value = count
+    if count >= 2:
+        value = 1
+    else:
+        value = 0
+
     n_total = size/total
     rv = n_total * value * 100
 
@@ -441,6 +448,7 @@ def comparators_calc(uid):
 
     final_result = dict()
     authors = dict()
+
     for r in result:
         if r not in final_result:
             final_result[r] = dict()
@@ -521,7 +529,6 @@ def comparators_calc(uid):
                         float(str(value)))
 
     text = PdfPlumber.convert_pdf_to_string(path)
-
     amstar = Amstar(text)
     amstar_result = amstar.result()
     amstar_score = amstar_result["result"]
@@ -541,6 +548,22 @@ def comparators_calc(uid):
 
     final_json = []
     for r in final_result:
+        t = [('?', '?')]
+        try:
+            text_cortado = extractTextToExtract(
+                text, final_result[r]["comparator"], final_result[r]["outcome"])
+            t = extractTotal(text_cortado)
+            if t != [('?', '?')] and check_numeric(t[0][0]) and check_numeric(t[0][1]):
+                final_result[r]["downgrade_n_participantes"] = downgrade_num_participantes(
+                    {
+                        "sample_size": final_result[r]["downgrade_n_participantes"]
+                    },
+                    int(t[0][0])+int(t[0][1])
+                )
+
+        except:
+            t = [('?', '?')]
+
         final_result[r]["amstar_score"] = amstar_score
         final_result[r]["final_score"] = final_result[r]["risco_vies_total"] + \
             final_result[r]["downgrade_n_participantes"] + \
@@ -577,13 +600,6 @@ def comparators_calc(uid):
         _json["result"]["risco_vies_total"] = final_result[r]["risco_vies_total"]
         _json["result"]["final_score"] = final_result[r]["final_score"]
 
-        t = [('?', '?')]
-        try:
-            text_cortado = extractTextToExtract(
-                text, final_result[r]["comparator"], final_result[r]["outcome"])
-            t = extractTotal(text_cortado)
-        except:
-            t = [('?', '?')]
         if "?" in _json["result"]["number_of_participants"]['items']:
             _json["result"]["number_of_participants"]['items'].pop("?")
 
@@ -606,6 +622,8 @@ def comparators_calc(uid):
                         _json["result"]["number_of_participants"]["items"][i] = int(
                             float(str(_total)) / float(str(size_zero)))
 
+        else:
+            _json["result"]["number_of_participants"]['total'] = '?'
         final_json.append(_json)
 
     return Success.body(final_json)
