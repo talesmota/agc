@@ -168,9 +168,9 @@ def calc(str, key, files):
 def downgrade_num_participantes(row, our_total=None):
     sample_size = row["sample_size"]
     if our_total is not None:
-        sample_size = out_total
+        sample_size = our_total
 
-    print('sample_size', sample_size)
+    print('sample_size...', sample_size)
     downgrade = 0
     if "?" in sample_size:
         # print('sample_size', -2)
@@ -207,7 +207,7 @@ def downgrade_risco_vies(row, total):
         str_t += f'{str_t}\t{row[t]["score"]}'
         count = count + (row[t]["score"])
 
-    if count >= 2:
+    if count > 2:
         value = 1
     else:
         value = 0
@@ -558,10 +558,13 @@ def comparators_calc(uid):
                     {
                         "sample_size": final_result[r]["downgrade_n_participantes"]
                     },
-                    int(t[0][0])+int(t[0][1])
+                    str(int(t[0][0])+int(t[0][1]))
                 )
+                print('final_result downgrade_n_participantes',
+                      final_result[r]["downgrade_n_participantes"])
 
-        except:
+        except Exception as e:
+            print(e)
             t = [('?', '?')]
 
         final_result[r]["amstar_score"] = amstar_score
@@ -622,8 +625,9 @@ def comparators_calc(uid):
                         _json["result"]["number_of_participants"]["items"][i] = int(
                             float(str(_total)) / float(str(size_zero)))
 
-        else:
+        elif t[0][0] == '?':
             _json["result"]["number_of_participants"]['total'] = '?'
+
         final_json.append(_json)
 
     return Success.body(final_json)
